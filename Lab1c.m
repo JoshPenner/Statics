@@ -1,72 +1,95 @@
-%size of data error check
+%{
+Authors: Josh Penner, John Matson and Aileen Maynard
+Date: February 15th, 2019
+Course: MECH 4630 - Statics and Dynamics
+Set: T
+%}
 
-clear %clear any previous data
-fId = -1;
+clear %clear any previous data to start
 
-prompt = 'Please enter file to open: ';
-fileName = input(prompt,'s');
-
-fId = fopen(fileName,'r') ;
+fail = -1; %testing for file open failure
 
 %{
-while fid == -1
+brief: find user designated file and load information into program
+param:
+return:
+%}
+prompt = 'Please enter file to open: ';
+filename = input(prompt,'s'); %user inputs full file name
+fid = fopen(filename,'r') ; %chosen text file stored into fid
+
+while fid == fail %if no file is opened
     prompt2 = 'File not found, please re-enter file to open: ';
     filename = input(prompt2,'s');
     fid = fopen(filename,'r') ;
 end
-%}
 
-S = textscan(fId,'%s','Delimiter','\n');
+S = textscan(fid,'%s','Delimiter','\n');
 S = S{1} ;
 
-%%Get the line numbers of each section
-idx1 = find(contains(S,'[JOINT COORDINATES]'));
-idx2 = find(contains(S,'[MEMBER JOINT CONNECTIVITY]'));
-idx3 = find(contains(S,'[REACTIONS AT NODES]'));
-idx4 = find(contains(S,'[EXTERNAL FORCES]'));
-idx5 = find(contains(S,'[FORCE UNITS]'));
 
-frewind(fId);
+%{
+Brief: Parse the file information into usuable arrays
+Param:
+Return:
+%}
+%Get the line numbers of each section
+idxS1 = strfind(S, '[JOINT COORDINATES]');
+idx1 = find(not(cellfun('isempty', idxS1)));
+idxS2 = strfind(S, '[MEMBER JOINT CONNECTIVITY]');
+idx2 = find(not(cellfun('isempty', idxS2)));
+idxS3 = strfind(S, '[REACTIONS AT NODES]');
+idx3 = find(not(cellfun('isempty', idxS3)));
+idxS4 = strfind(S, '[EXTERNAL FORCES]');
+idx4 = find(not(cellfun('isempty', idxS4)));
+idxS5 = strfind(S, '[FORCE UNITS]');
+idx5 = find(not(cellfun('isempty', idxS5)));
+
+frewind(fid);
 
 % Read data from joint section into structure
-jointSection = textscan(fId, '%f %f %f ','headerLines',idx1,'delimiter','\t');
-joint.index=cell2mat(jointSection(1));
-joint.x=cell2mat(jointSection(2));
-joint.y=cell2mat(jointSection(3));
+jointsection = textscan(fid, '%f %f %f ','headerLines',idx1,'delimiter','\t');
+joint.index=cell2mat(jointsection(1));
+joint.x=cell2mat(jointsection(2));
+joint.y=cell2mat(jointsection(3));
 
-frewind(fId);
+frewind(fid);
 
 % Read data from member section into structure
-memberSection = textscan(fId, '%d %d %d','headerLines',idx2,'delimiter','\t');
-member.index = cell2mat(memberSection(1));
-member.jointA = cell2mat(memberSection(2));
-member.jointB = cell2mat(memberSection(3));
+membersection = textscan(fid, '%d %d %d','headerLines',idx2,'delimiter','\t');
+member.index = cell2mat(membersection(1));
+member.jointA = cell2mat(membersection(2));
+member.jointB = cell2mat(membersection(3));
 
-frewind(fId);
+frewind(fid);
 
 % Read data from reaction section into structure
-reactionSection = textscan(fId, '%d %d %c','headerLines',idx3,'delimiter','\t');
-reaction.index = cell2mat(reactionSection(1));
-reaction.node = cell2mat(reactionSection(2));
-reaction.dir = cell2mat(reactionSection(3));
+reactionsection = textscan(fid, '%d %d %c','headerLines',idx3,'delimiter','\t');
+reaction.index = cell2mat(reactionsection(1));
+reaction.node = cell2mat(reactionsection(2));
+reaction.dir = cell2mat(reactionsection(3));
 
-frewind(fId);
+frewind(fid);
 
 % Read data from external force section into structure
-extfSection = textscan(fId, '%d %d %f %c','headerLines',idx4,'delimiter','\t');
-extf.index = cell2mat(extfSection(1));
-extf.joint = cell2mat(extfSection(2));
-extf.force = cell2mat(extfSection(3));
-extf.dir = cell2mat(extfSection(4));
+extfsection = textscan(fid, '%d %d %f %c','headerLines',idx4,'delimiter','\t');
+extf.index = cell2mat(extfsection(1));
+extf.joint = cell2mat(extfsection(2));
+extf.force = cell2mat(extfsection(3));
+extf.dir = cell2mat(extfsection(4));
 
-frewind(fId);
+frewind(fid);
 
 % Read data from unit section into structure
-units = cell2mat(textscan(fId, '%c','headerLines',idx5));
-unit = cellstr(units);
+units = cell2mat(textscan(fid, '%c','headerLines',idx5));
 
-fclose(fId) ; % close file
+fclose(fid) ; % close file
 
+%{
+Brief: Error check: number of variables from file
+Param:
+Return:
+%}
 NJ = size(joint.index,1); % number of joints
 
 NM = size(member.index,1); % number of members
@@ -80,8 +103,12 @@ if 2*NJ ~= (NM+NR)
     fprintf ('\nNJ = %d, NM = %d and NR = %d\n', NJ, NM, NR)
     error(message)
 end
-% note: add error checking, make sure 2*NJ = NM+NR
 
+%{
+Brief: Create the matrix for calculations
+Param:
+Return:
+%}
 E = zeros(NJ*2,1); % create E matrix for external forces
 
 % fill E matrix with external force values
@@ -127,12 +154,16 @@ end
 
 result = inv(M) * (-E);
 
-% PRINT TO FILE
+%{
+Brief: Places matrix and results into user designated file
+Param:
+Return:
+%}
 text = '.txt';
 prompt = 'Please enter file to write to: ';
-fileName = input(prompt,'s');
-fileName = strcat(fileName,text);
-trust = fopen(fileName,'wt') ;
+filename = input(prompt,'s');
+filename = strcat(filename,text);
+trust = fopen(filename,'wt') ;
 fprintf(trust,'M Matrix\n--------\n');
 
 rowstring = "";
@@ -149,15 +180,10 @@ end
 fprintf(trust,'\n\nSolution\n--------\n');
 
 counter = 0;
-
+ 
 for memnum = 1:NM
-    fprintf(trust,'Member ');
-    fprintf(trust,'%02.0f',counter);
-    fprintf(trust, ': F= ');
-    fprintf(trust, '%10.2f',abs(result(memnum)));
-    fprintf(trust, ' ');
-    fprintf(trust, units);
-    
+    fprintf(trust,'Member %02.0f: F= %10.2f ', counter, abs(result(memnum)));
+    fprintf(trust,units);
     if result(memnum)<0
         fprintf(trust, ' [C]');
     else
@@ -167,19 +193,17 @@ for memnum = 1:NM
     counter=counter + 1;
 end
 
+fprintf(trust, '\n');
+
 for reactnum = 1:NR
     if reaction.dir(reactnum) == 'X'
         fprintf(trust, 'X');
     else
         fprintf(trust, 'Y');
-    end
-    fprintf(trust,'-direction reaction on joint ');
-    fprintf(trust,'%2.0f',reaction.node(reactnum));
-    fprintf(trust, ' = ');
-    fprintf(trust, '%+10.2f',result(NM+reactnum));
-    fprintf(trust, ' ');
-    fprintf(trust, units);
-    fprintf(trust, '\n');
+    end 
+    fprintf(trust,'-direction reaction on joint %2.0f = %+10.2f ', reaction.node(reactnum), result(NM+reactnum));
+    fprintf(trust,units);
+    fprintf(trust,'\n');
 end
 
 fclose(trust) ; % close file
