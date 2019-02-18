@@ -1,74 +1,71 @@
 %size of data error check
 
 clear %clear any previous data
-fid = -1;
+fId = -1;
 
 prompt = 'Please enter file to open: ';
-filename = input(prompt,'s');
+fileName = input(prompt,'s');
 
-fid = fopen(filename,'r') ;
+fId = fopen(fileName,'r') ;
 
+%{
 while fid == -1
     prompt2 = 'File not found, please re-enter file to open: ';
     filename = input(prompt2,'s');
     fid = fopen(filename,'r') ;
 end
+%}
 
-S = textscan(fid,'%s','Delimiter','\n');
+S = textscan(fId,'%s','Delimiter','\n');
 S = S{1} ;
 
 %%Get the line numbers of each section
-idxS1 = strfind(S, '[JOINT COORDINATES]');
-idx1 = find(not(cellfun('isempty', idxS1)));
-idxS2 = strfind(S, '[MEMBER JOINT CONNECTIVITY]');
-idx2 = find(not(cellfun('isempty', idxS2)));
-idxS3 = strfind(S, '[REACTIONS AT NODES]');
-idx3 = find(not(cellfun('isempty', idxS3)));
-idxS4 = strfind(S, '[EXTERNAL FORCES]');
-idx4 = find(not(cellfun('isempty', idxS4)));
-idxS5 = strfind(S, '[FORCE UNITS]');
-idx5 = find(not(cellfun('isempty', idxS5)));
+idx1 = find(contains(S,'[JOINT COORDINATES]'));
+idx2 = find(contains(S,'[MEMBER JOINT CONNECTIVITY]'));
+idx3 = find(contains(S,'[REACTIONS AT NODES]'));
+idx4 = find(contains(S,'[EXTERNAL FORCES]'));
+idx5 = find(contains(S,'[FORCE UNITS]'));
 
-frewind(fid);
+frewind(fId);
 
 % Read data from joint section into structure
-jointsection = textscan(fid, '%f %f %f ','headerLines',idx1,'delimiter','\t');
-joint.index=cell2mat(jointsection(1));
-joint.x=cell2mat(jointsection(2));
-joint.y=cell2mat(jointsection(3));
+jointSection = textscan(fId, '%f %f %f ','headerLines',idx1,'delimiter','\t');
+joint.index=cell2mat(jointSection(1));
+joint.x=cell2mat(jointSection(2));
+joint.y=cell2mat(jointSection(3));
 
-frewind(fid);
+frewind(fId);
 
 % Read data from member section into structure
-membersection = textscan(fid, '%d %d %d','headerLines',idx2,'delimiter','\t');
-member.index = cell2mat(membersection(1));
-member.jointA = cell2mat(membersection(2));
-member.jointB = cell2mat(membersection(3));
+memberSection = textscan(fId, '%d %d %d','headerLines',idx2,'delimiter','\t');
+member.index = cell2mat(memberSection(1));
+member.jointA = cell2mat(memberSection(2));
+member.jointB = cell2mat(memberSection(3));
 
-frewind(fid);
+frewind(fId);
 
 % Read data from reaction section into structure
-reactionsection = textscan(fid, '%d %d %c','headerLines',idx3,'delimiter','\t');
-reaction.index = cell2mat(reactionsection(1));
-reaction.node = cell2mat(reactionsection(2));
-reaction.dir = cell2mat(reactionsection(3));
+reactionSection = textscan(fId, '%d %d %c','headerLines',idx3,'delimiter','\t');
+reaction.index = cell2mat(reactionSection(1));
+reaction.node = cell2mat(reactionSection(2));
+reaction.dir = cell2mat(reactionSection(3));
 
-frewind(fid);
+frewind(fId);
 
 % Read data from external force section into structure
-extfsection = textscan(fid, '%d %d %f %c','headerLines',idx4,'delimiter','\t');
-extf.index = cell2mat(extfsection(1));
-extf.joint = cell2mat(extfsection(2));
-extf.force = cell2mat(extfsection(3));
-extf.dir = cell2mat(extfsection(4));
+extfSection = textscan(fId, '%d %d %f %c','headerLines',idx4,'delimiter','\t');
+extf.index = cell2mat(extfSection(1));
+extf.joint = cell2mat(extfSection(2));
+extf.force = cell2mat(extfSection(3));
+extf.dir = cell2mat(extfSection(4));
 
-frewind(fid);
+frewind(fId);
 
 % Read data from unit section into structure
-units = cell2mat(textscan(fid, '%c','headerLines',idx5));
+units = cell2mat(textscan(fId, '%c','headerLines',idx5));
 unit = cellstr(units);
 
-fclose(fid) ; % close file
+fclose(fId) ; % close file
 
 NJ = size(joint.index,1); % number of joints
 
@@ -133,9 +130,9 @@ result = inv(M) * (-E);
 % PRINT TO FILE
 text = '.txt';
 prompt = 'Please enter file to write to: ';
-filename = input(prompt,'s');
-filename = strcat(filename,text);
-trust = fopen(filename,'wt') ;
+fileName = input(prompt,'s');
+fileName = strcat(fileName,text);
+trust = fopen(fileName,'wt') ;
 fprintf(trust,'M Matrix\n--------\n');
 
 rowstring = "";
